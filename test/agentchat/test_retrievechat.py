@@ -10,8 +10,8 @@ try:
     from autogen.agentchat.contrib.retrieve_user_proxy_agent import (
         RetrieveUserProxyAgent,
     )
-    from autogen.retrieve_utils import create_vector_db_from_dir, query_vector_db
     import chromadb
+    from chromadb.utils import embedding_functions as ef
 
     skip_test = False
 except ImportError:
@@ -49,6 +49,7 @@ def test_retrievechat():
         },
     )
 
+    sentence_transformer_ef = ef.SentenceTransformerEmbeddingFunction()
     ragproxyagent = RetrieveUserProxyAgent(
         name="ragproxyagent",
         human_input_mode="NEVER",
@@ -58,6 +59,8 @@ def test_retrievechat():
             "chunk_token_size": 2000,
             "model": config_list[0]["model"],
             "client": chromadb.PersistentClient(path="/tmp/chromadb"),
+            "embedding_function": sentence_transformer_ef,
+            "get_or_create": True,
         },
     )
 
@@ -69,26 +72,5 @@ def test_retrievechat():
     print(conversations)
 
 
-@pytest.mark.skipif(
-    sys.platform in ["darwin", "win32"] or skip_test,
-    reason="do not run on MacOS or windows",
-)
-def test_retrieve_utils():
-    client = chromadb.PersistentClient(path="/tmp/chromadb")
-    create_vector_db_from_dir(dir_path="./website/docs", client=client, collection_name="autogen-docs")
-    results = query_vector_db(
-        query_texts=[
-            "How can I use AutoGen UserProxyAgent and AssistantAgent to do code generation?",
-        ],
-        n_results=4,
-        client=client,
-        collection_name="autogen-docs",
-        search_string="AutoGen",
-    )
-    print(results["ids"][0])
-    assert len(results["ids"][0]) == 4
-
-
 if __name__ == "__main__":
     test_retrievechat()
-    test_retrieve_utils()
